@@ -1,0 +1,2026 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>EduKids - Aprender a Jogar</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome para ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Playwrite PT (Escolar Portuguesa), Caveat, Dancing Script, Fredoka, Nunito -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playwrite+PT:wght@100..400&family=Caveat:wght@700&family=Dancing+Script:wght@700&family=Fredoka:wght@400;600;700&family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brandPink: '#FF6B8B',
+                        brandYellow: '#FFD166',
+                        brandGreen: '#06D6A0',
+                        brandBlue: '#118AB2',
+                        brandPurple: '#8338EC',
+                        brandOrange: '#FF9F1C'
+                    },
+                    fontFamily: {
+                        fredoka: ['Fredoka', 'sans-serif'],
+                        nunito: ['Nunito', 'sans-serif'],
+                        cursive: ['Playwrite PT', 'Dancing Script', 'Caveat', 'cursive']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Fredoka', cursive, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+            background: linear-gradient(135deg, #e0f2fe 0%, #fef3c7 50%, #fce7f3 100%);
+            min-height: 100vh;
+        }
+
+        /* Efeito Bouncy para botões infantis */
+        .btn-bounce {
+            transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.15s ease;
+        }
+        .btn-bounce:active {
+            transform: scale(0.92);
+        }
+
+        /* Animação do Cartão do Jogo da Memória */
+        .perspective-1000 {
+            perspective: 1000px;
+        }
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+        }
+        .card.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            border-radius: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .card-back {
+            transform: rotateY(180deg);
+        }
+
+        /* Canvas de desenho */
+        canvas {
+            touch-action: none;
+        }
+
+        /* Scrollbar personalizada */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #FF6B8B;
+            border-radius: 10px;
+        }
+
+        .font-cursive-school {
+            font-family: 'Playwrite PT', 'Dancing Script', cursive;
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen text-slate-800 antialiased overflow-x-hidden">
+
+    <header class="bg-white/80 backdrop-blur-md border-b-4 border-yellow-300 sticky top-0 z-40 px-4 py-3 shadow-md">
+        <div class="max-w-6xl mx-auto flex items-center justify-between">
+            
+            <!-- Logo do App -->
+            <button onclick="switchModule('dashboard')" class="flex items-center gap-2 group text-left">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-pink-500 to-yellow-400 flex items-center justify-center text-white text-2xl font-bold shadow-md transform group-hover:rotate-12 transition-transform">
+                    <i class="fa-solid fa-gamepad"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 tracking-wide">
+                        EduKids
+                    </h1>
+                    <p class="text-xs text-slate-500 font-semibold hidden sm:block" data-i18n="app_subtitle">Aprender a Jogar & Criar</p>
+                </div>
+            </button>
+
+            <!-- Placar de Estrelas e Controlos de Áudio/Idioma -->
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2 bg-amber-100 border-2 border-amber-300 px-3 py-1.5 rounded-full shadow-inner">
+                    <i class="fa-solid fa-star text-amber-500 text-xl animate-bounce"></i>
+                    <span id="global-stars" class="font-extrabold text-amber-800 text-lg sm:text-xl">0</span>
+                </div>
+
+                <!-- Seletor de Idioma para Voz (PT / EN) -->
+                <button id="lang-toggle-btn" onclick="toggleLanguage()" class="px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 border-2 border-slate-300 font-extrabold text-slate-700 text-sm btn-bounce shadow-sm flex items-center gap-1.5" title="Mudar Idioma da Voz / Change Voice Language">
+                    <span id="lang-flag">🇵🇹</span> <span id="lang-text">PT</span>
+                </button>
+
+                <!-- Botão Áudio On/Off -->
+                <button id="audio-toggle-btn" onclick="toggleAudio()" class="w-11 h-11 rounded-full bg-slate-100 hover:bg-slate-200 border-2 border-slate-300 flex items-center justify-center text-slate-700 text-lg btn-bounce shadow-sm">
+                    <i id="audio-icon" class="fa-solid fa-volume-high"></i>
+                </button>
+
+                <!-- Ecrã Inteiro -->
+                <button onclick="toggleFullscreen()" class="w-11 h-11 rounded-full bg-indigo-100 hover:bg-indigo-200 border-2 border-indigo-300 text-indigo-700 flex items-center justify-center text-lg btn-bounce shadow-sm">
+                    <i class="fa-solid fa-expand"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow p-4 sm:p-6 max-w-6xl mx-auto w-full">
+
+        <!-- DASHBOARD PRINCIPAL -->
+        <section id="mod-dashboard" class="space-y-6">
+            <div class="text-center max-w-2xl mx-auto space-y-2 relative">
+                <div class="flex items-center justify-center gap-2">
+                    <h2 class="text-3xl sm:text-4xl font-extrabold text-purple-900" data-i18n="dash_greeting">
+                        Que bom ter-te aqui! 👋
+                    </h2>
+                    <button onclick="speakInstruction('dashboard')" class="bg-purple-100 hover:bg-purple-200 text-purple-700 w-10 h-10 rounded-full flex items-center justify-center text-lg border-2 border-purple-300 btn-bounce shadow-sm" title="Ouvir O Que Fazer">
+                        <i class="fa-solid fa-volume-high"></i>
+                    </button>
+                </div>
+                <p class="text-slate-600 text-lg font-medium" data-i18n="dash_subtitle">
+                    Escolha uma atividade divertida para jogar hoje no teu tablet ou computador!
+                </p>
+            </div>
+
+            <!-- Grelha de Atividades -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pt-4">
+
+                <!-- Card 1: Jogo da Memória -->
+                <div onclick="switchModule('memory')" class="bg-gradient-to-br from-pink-400 to-rose-500 text-white p-6 rounded-3xl shadow-xl hover:shadow-2xl cursor-pointer btn-bounce relative overflow-hidden group border-4 border-white">
+                    <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-white/10 rounded-full group-hover:scale-125 transition-transform"></div>
+                    <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-3xl mb-4 shadow-inner">
+                        <i class="fa-solid fa-brain"></i>
+                    </div>
+                    <span class="bg-white/20 text-xs font-extrabold px-3 py-1 rounded-full uppercase tracking-wider" data-i18n="card_memory_tag">Desafio Visual</span>
+                    <h3 class="text-2xl font-black mt-2" data-i18n="card_memory_title">Jogo da Memória</h3>
+                    <p class="text-pink-100 text-sm mt-1" data-i18n="card_memory_desc">Encontra os pares de animais e objetos!</p>
+                </div>
+
+                <!-- Card 2: Desafio da Matemática -->
+                <div onclick="switchModule('math')" class="bg-gradient-to-br from-amber-400 to-orange-500 text-white p-6 rounded-3xl shadow-xl hover:shadow-2xl cursor-pointer btn-bounce relative overflow-hidden group border-4 border-white">
+                    <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-white/10 rounded-full group-hover:scale-125 transition-transform"></div>
+                    <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-3xl mb-4 shadow-inner">
+                        <i class="fa-solid fa-calculator"></i>
+                    </div>
+                    <span class="bg-white/20 text-xs font-extrabold px-3 py-1 rounded-full uppercase tracking-wider" data-i18n="card_math_tag">Números & Contas</span>
+                    <h3 class="text-2xl font-black mt-2" data-i18n="card_math_title">Matemática Divertida</h3>
+                    <p class="text-amber-100 text-sm mt-1" data-i18n="card_math_desc">Somas, subtrações e contagem rápida!</p>
+                </div>
+
+                <!-- Card 3: Atelier de Desenho -->
+                <div onclick="switchModule('draw')" class="bg-gradient-to-br from-emerald-400 to-teal-600 text-white p-6 rounded-3xl shadow-xl hover:shadow-2xl cursor-pointer btn-bounce relative overflow-hidden group border-4 border-white">
+                    <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-white/10 rounded-full group-hover:scale-125 transition-transform"></div>
+                    <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-3xl mb-4 shadow-inner">
+                        <i class="fa-solid fa-palette"></i>
+                    </div>
+                    <span class="bg-white/20 text-xs font-extrabold px-3 py-1 rounded-full uppercase tracking-wider" data-i18n="card_draw_tag">Criatividade</span>
+                    <h3 class="text-2xl font-black mt-2" data-i18n="card_draw_title">Atelier de Pintura</h3>
+                    <p class="text-emerald-100 text-sm mt-1" data-i18n="card_draw_desc">Desenha, pinta e solta a imaginação!</p>
+                </div>
+
+                <!-- Card 4: Construtor de Palavras -->
+                <div onclick="switchModule('words')" class="bg-gradient-to-br from-blue-400 to-indigo-600 text-white p-6 rounded-3xl shadow-xl hover:shadow-2xl cursor-pointer btn-bounce relative overflow-hidden group border-4 border-white">
+                    <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-white/10 rounded-full group-hover:scale-125 transition-transform"></div>
+                    <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-3xl mb-4 shadow-inner">
+                        <i class="fa-solid fa-font"></i>
+                    </div>
+                    <span class="bg-white/20 text-xs font-extrabold px-3 py-1 rounded-full uppercase tracking-wider" data-i18n="card_words_tag">Língua Portuguesa</span>
+                    <h3 class="text-2xl font-black mt-2" data-i18n="card_words_title">Mundo das Palavras</h3>
+                    <p class="text-blue-100 text-sm mt-1" data-i18n="card_words_desc">Toca nas letras para formar os nomes!</p>
+                </div>
+
+                <!-- Card 5: Escrita Cursiva (Caligrafia Escolar PT) -->
+                <div onclick="switchModule('cursive')" class="bg-gradient-to-br from-fuchsia-500 to-purple-600 text-white p-6 rounded-3xl shadow-xl hover:shadow-2xl cursor-pointer btn-bounce relative overflow-hidden group border-4 border-white">
+                    <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-white/10 rounded-full group-hover:scale-125 transition-transform"></div>
+                    <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-3xl mb-4 shadow-inner">
+                        <i class="fa-solid fa-pen-nib"></i>
+                    </div>
+                    <span class="bg-white/20 text-xs font-extrabold px-3 py-1 rounded-full uppercase tracking-wider" data-i18n="card_cursive_tag">Caligrafia</span>
+                    <h3 class="text-2xl font-black mt-2 font-cursive-school tracking-wide text-3xl" data-i18n="card_cursive_title">Escrita Cursiva</h3>
+                    <p class="text-fuchsia-100 text-sm mt-1" data-i18n="card_cursive_desc">Passa por cima com o dedo e treina a tua letra!</p>
+                </div>
+
+                <!-- Card 6: Contador de Histórias Mágicas -->
+                <div onclick="switchModule('story')" class="bg-gradient-to-br from-purple-500 to-indigo-700 text-white p-6 rounded-3xl shadow-xl hover:shadow-2xl cursor-pointer btn-bounce relative overflow-hidden group border-4 border-white">
+                    <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-white/10 rounded-full group-hover:scale-125 transition-transform"></div>
+                    <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-3xl mb-4 shadow-inner">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    </div>
+                    <span class="bg-white/20 text-xs font-extrabold px-3 py-1 rounded-full uppercase tracking-wider" data-i18n="card_story_tag">Com IA</span>
+                    <h3 class="text-2xl font-black mt-2" data-i18n="card_story_title">Histórias Mágicas</h3>
+                    <p class="text-purple-100 text-sm mt-1" data-i18n="card_story_desc">Cria histórias infantis e ouve a leitura!</p>
+                </div>
+
+                <!-- Card 7: Robot Programador -->
+                <div onclick="switchModule('robot')" class="bg-gradient-to-br from-indigo-500 to-cyan-600 text-white p-6 rounded-3xl shadow-xl hover:shadow-2xl cursor-pointer btn-bounce relative overflow-hidden group border-4 border-white">
+                    <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-white/10 rounded-full group-hover:scale-125 transition-transform"></div>
+                    <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-3xl mb-4 shadow-inner">
+                        <i class="fa-solid fa-robot"></i>
+                    </div>
+                    <span class="bg-white/20 text-xs font-extrabold px-3 py-1 rounded-full uppercase tracking-wider" data-i18n="card_robot_tag">Lógica & Código</span>
+                    <h3 class="text-2xl font-black mt-2" data-i18n="card_robot_title">Robot Programador</h3>
+                    <p class="text-cyan-100 text-sm mt-1" data-i18n="card_robot_desc">Programa o robot para alcançar a estrela!</p>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- MÓDULO 1: JOGO DA MEMÓRIA -->
+        <section id="mod-memory" class="hidden space-y-4 max-w-4xl mx-auto">
+            <div class="flex items-center justify-between bg-white p-4 rounded-2xl shadow border-2 border-pink-200">
+                <button onclick="switchModule('dashboard')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl flex items-center gap-2 btn-bounce">
+                    <i class="fa-solid fa-arrow-left"></i> <span data-i18n="btn_back">Voltar</span>
+                </button>
+                <div class="flex items-center gap-2">
+                    <h3 class="text-xl font-black text-pink-900" data-i18n="mem_title">Jogo da Memória 🧠</h3>
+                    <button onclick="speakInstruction('memory')" class="bg-pink-100 hover:bg-pink-200 text-pink-800 w-9 h-9 rounded-xl border-2 border-pink-300 flex items-center justify-center text-base btn-bounce shadow-sm" title="Ouvir Instrução">
+                        <i class="fa-solid fa-volume-high"></i>
+                    </button>
+                </div>
+                <button onclick="initMemoryGame()" class="bg-pink-500 hover:bg-pink-600 text-white font-bold px-4 py-2 rounded-xl text-sm btn-bounce shadow flex items-center gap-2">
+                    <i class="fa-solid fa-rotate-right"></i> <span data-i18n="btn_new_game">Novo Jogo</span>
+                </button>
+            </div>
+
+            <!-- Seletor de Níveis do Jogo da Memória -->
+            <div class="flex items-center justify-center gap-2 bg-white p-2 rounded-2xl border-2 border-pink-200 shadow-sm max-w-md mx-auto">
+                <span class="text-xs font-black text-pink-700 uppercase tracking-wider mr-1" data-i18n="lbl_level">Nível:</span>
+                <button onclick="setMemoryLevel(1)" id="btn-mem-lvl-1" class="px-3 py-1.5 rounded-xl font-bold text-xs sm:text-sm btn-bounce transition-all">⭐ 1 (<span data-i18n="lvl_easy">Fácil</span>)</button>
+                <button onclick="setMemoryLevel(2)" id="btn-mem-lvl-2" class="px-3 py-1.5 rounded-xl font-bold text-xs sm:text-sm btn-bounce transition-all">⭐⭐ 2 (<span data-i18n="lvl_medium">Médio</span>)</button>
+                <button onclick="setMemoryLevel(3)" id="btn-mem-lvl-3" class="px-3 py-1.5 rounded-xl font-bold text-xs sm:text-sm btn-bounce transition-all">⭐⭐⭐ 3 (<span data-i18n="lvl_hard">Difícil</span>)</button>
+            </div>
+
+            <div class="flex justify-around bg-pink-50 p-3 rounded-2xl border-2 border-pink-200 font-black text-pink-900 text-sm sm:text-base">
+                <div><span data-i18n="mem_moves_label">Jogadas:</span> <span id="mem-moves" class="text-pink-600">0</span></div>
+                <div><span data-i18n="mem_pairs_label">Pares:</span> <span id="mem-matches" class="text-pink-600">0/6</span></div>
+            </div>
+
+            <div id="memory-grid" class="grid grid-cols-3 sm:grid-cols-4 gap-3 sm:gap-4 p-2">
+                <!-- Cartões inseridos via JS -->
+            </div>
+        </section>
+
+        <!-- MÓDULO 2: MATEMÁTICA DIVERTIDA -->
+        <section id="mod-math" class="hidden space-y-4 max-w-2xl mx-auto">
+            <div class="flex items-center justify-between bg-white p-4 rounded-2xl shadow border-2 border-amber-200">
+                <button onclick="switchModule('dashboard')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl flex items-center gap-2 btn-bounce">
+                    <i class="fa-solid fa-arrow-left"></i> <span data-i18n="btn_back">Voltar</span>
+                </button>
+                <div class="flex items-center gap-2">
+                    <h3 class="text-xl font-black text-amber-900" data-i18n="math_title">Matemática Divertida 🔢</h3>
+                    <button onclick="speakInstruction('math')" class="bg-amber-100 hover:bg-amber-200 text-amber-800 w-9 h-9 rounded-xl border-2 border-amber-300 flex items-center justify-center text-base btn-bounce shadow-sm" title="Ouvir Instrução">
+                        <i class="fa-solid fa-volume-high"></i>
+                    </button>
+                </div>
+                <button onclick="initMathGame()" class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-4 py-2 rounded-xl text-sm btn-bounce shadow flex items-center gap-2">
+                    <i class="fa-solid fa-rotate-right"></i> <span data-i18n="btn_next">Próxima</span>
+                </button>
+            </div>
+
+            <!-- Seletor de Níveis da Matemática -->
+            <div class="flex items-center justify-center gap-2 bg-white p-2 rounded-2xl border-2 border-amber-200 shadow-sm max-w-md mx-auto">
+                <span class="text-xs font-black text-amber-700 uppercase tracking-wider mr-1" data-i18n="lbl_level">Nível:</span>
+                <button onclick="setMathLevel(1)" id="btn-math-lvl-1" class="px-3 py-1.5 rounded-xl font-bold text-xs sm:text-sm btn-bounce transition-all">⭐ 1 (1-5)</button>
+                <button onclick="setMathLevel(2)" id="btn-math-lvl-2" class="px-3 py-1.5 rounded-xl font-bold text-xs sm:text-sm btn-bounce transition-all">⭐⭐ 2 (1-10)</button>
+                <button onclick="setMathLevel(3)" id="btn-math-lvl-3" class="px-3 py-1.5 rounded-xl font-bold text-xs sm:text-sm btn-bounce transition-all">⭐⭐⭐ 3 (1-20)</button>
+            </div>
+
+            <div class="bg-white rounded-3xl p-6 shadow-xl border-4 border-amber-300 flex flex-col items-center space-y-6">
+                <div class="flex justify-between items-center w-full px-2">
+                    <span class="text-sm font-bold text-slate-500" data-i18n="math_streak_label">Sequência Direta:</span>
+                    <span id="math-streak" class="bg-amber-100 text-amber-800 font-black px-3 py-1 rounded-xl text-base">0</span>
+                </div>
+
+                <div id="math-visual-area" class="flex flex-wrap items-center justify-center gap-2 text-4xl sm:text-5xl my-4 min-h-[80px]">
+                    <!-- Objetos de contagem -->
+                </div>
+
+                <h4 id="math-question-text" class="text-2xl sm:text-3xl font-black text-amber-900 text-center">
+                    Quanto é 2 + 3?
+                </h4>
+
+                <div id="math-options-grid" class="grid grid-cols-2 gap-4 w-full max-w-xs">
+                    <!-- Botões de opção -->
+                </div>
+
+                <div id="math-feedback" class="h-8 text-center font-black text-xl"></div>
+            </div>
+        </section>
+
+        <!-- MÓDULO 3: ATELIER DE PINTURA -->
+        <section id="mod-draw" class="hidden space-y-4 max-w-4xl mx-auto">
+            <div class="flex items-center justify-between bg-white p-4 rounded-2xl shadow border-2 border-emerald-200">
+                <button onclick="switchModule('dashboard')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl flex items-center gap-2 btn-bounce">
+                    <i class="fa-solid fa-arrow-left"></i> <span data-i18n="btn_back">Voltar</span>
+                </button>
+                <div class="flex items-center gap-2">
+                    <h3 class="text-xl font-black text-emerald-900" data-i18n="draw_title">Atelier de Pintura 🎨</h3>
+                    <button onclick="speakInstruction('draw')" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 w-9 h-9 rounded-xl border-2 border-emerald-300 flex items-center justify-center text-base btn-bounce shadow-sm" title="Ouvir Instrução">
+                        <i class="fa-solid fa-volume-high"></i>
+                    </button>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="clearCanvas()" class="bg-rose-500 hover:bg-rose-600 text-white font-bold px-3 py-2 rounded-xl text-sm btn-bounce shadow">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                    <button onclick="downloadCanvas()" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-3 py-2 rounded-xl text-sm btn-bounce shadow flex items-center gap-1.5">
+                        <i class="fa-solid fa-download"></i> <span data-i18n="btn_save">Guardar</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-3xl p-4 shadow-xl border-4 border-emerald-300 space-y-4">
+                <!-- Paleta de Cores e Ferramentas -->
+                <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-50 p-3 rounded-2xl border-2 border-slate-200">
+                    <div class="flex items-center gap-2">
+                        <button onclick="setDrawColor('#EF4444')" class="w-8 h-8 rounded-full bg-red-500 border-2 border-white shadow btn-bounce"></button>
+                        <button onclick="setDrawColor('#3B82F6')" class="w-8 h-8 rounded-full bg-blue-500 border-2 border-white shadow btn-bounce"></button>
+                        <button onclick="setDrawColor('#10B981')" class="w-8 h-8 rounded-full bg-emerald-500 border-2 border-white shadow btn-bounce"></button>
+                        <button onclick="setDrawColor('#F59E0B')" class="w-8 h-8 rounded-full bg-amber-500 border-2 border-white shadow btn-bounce"></button>
+                        <button onclick="setDrawColor('#8B5CF6')" class="w-8 h-8 rounded-full bg-purple-500 border-2 border-white shadow btn-bounce"></button>
+                        <button onclick="setDrawColor('#000000')" class="w-8 h-8 rounded-full bg-black border-2 border-white shadow btn-bounce"></button>
+                        <button onclick="setEraser()" class="px-3 py-1 rounded-xl bg-slate-200 text-slate-700 font-bold text-xs btn-bounce border border-slate-300" data-i18n="btn_eraser">
+                            🧽 Borracha
+                        </button>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-slate-500" data-i18n="draw_size_label">Tamanho:</span>
+                        <input id="brush-size" type="range" min="4" max="32" value="12" class="w-24 accent-emerald-500">
+                    </div>
+                </div>
+
+                <!-- Contentor do Canvas -->
+                <div class="w-full h-[380px] rounded-2xl overflow-hidden border-2 border-slate-200 bg-white relative">
+                    <canvas id="paint-canvas" class="w-full h-full cursor-crosshair"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- MÓDULO 4: MUNDO DAS PALAVRAS -->
+        <section id="mod-words" class="hidden space-y-4 max-w-2xl mx-auto">
+            <div class="flex items-center justify-between bg-white p-4 rounded-2xl shadow border-2 border-blue-200">
+                <button onclick="switchModule('dashboard')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl flex items-center gap-2 btn-bounce">
+                    <i class="fa-solid fa-arrow-left"></i> <span data-i18n="btn_back">Voltar</span>
+                </button>
+                <div class="flex items-center gap-2">
+                    <h3 class="text-xl font-black text-blue-900" data-i18n="words_title">Mundo das Palavras 🔤</h3>
+                    <button onclick="speakInstruction('words')" class="bg-blue-100 hover:bg-blue-200 text-blue-800 w-9 h-9 rounded-xl border-2 border-blue-300 flex items-center justify-center text-base btn-bounce shadow-sm" title="Ouvir Instrução">
+                        <i class="fa-solid fa-volume-high"></i>
+                    </button>
+                </div>
+                <button onclick="nextWordGame()" class="bg-blue-500 hover:bg-blue-600 text-white font-bold px-4 py-2 rounded-xl text-sm btn-bounce shadow flex items-center gap-2">
+                    <i class="fa-solid fa-forward"></i> <span data-i18n="btn_next">Próxima</span>
+                </button>
+            </div>
+
+            <!-- Seletor de Níveis das Palavras -->
+            <div class="flex items-center justify-center gap-2 bg-white p-2 rounded-2xl border-2 border-blue-200 shadow-sm max-w-md mx-auto">
+                <span class="text-xs font-black text-blue-700 uppercase tracking-wider mr-1" data-i18n="lbl_level">Nível:</span>
+                <button onclick="setWordLevel(1)" id="btn-word-lvl-1" class="px-3 py-1.5 rounded-xl font-bold text-xs sm:text-sm btn-bounce transition-all">⭐ 1 (3 let.)</button>
+                <button onclick="setWordLevel(2)" id="btn-word-lvl-2" class="px-3 py-1.5 rounded-xl font-bold text-xs sm:text-sm btn-bounce transition-all">⭐⭐ 2 (4 let.)</button>
+                <button onclick="setWordLevel(3)" id="btn-word-lvl-3" class="px-3 py-1.5 rounded-xl font-bold text-xs sm:text-sm btn-bounce transition-all">⭐⭐⭐ 3 (5+ let.)</button>
+            </div>
+
+            <div class="bg-white rounded-3xl p-6 shadow-xl border-4 border-blue-300 flex flex-col items-center space-y-6">
+                <div id="word-emoji" class="text-7xl sm:text-8xl animate-bounce">
+                    🐱
+                </div>
+
+                <!-- Espaços de Letras -->
+                <div id="word-slots" class="flex flex-wrap justify-center gap-2 my-2">
+                    <!-- Slots inseridos via JS -->
+                </div>
+
+                <!-- Teclado de Letras Disponíveis -->
+                <div id="word-letters-bank" class="flex flex-wrap justify-center gap-2 max-w-md pt-4 border-t-2 border-slate-100">
+                    <!-- Letras inseridas via JS -->
+                </div>
+
+                <div id="word-feedback" class="h-8 text-center font-black text-xl"></div>
+            </div>
+        </section>
+
+        <!-- MÓDULO 5: ESCRITA CURSIVA (LETRA ESCOLAR IDENTICA AO MODELO) -->
+        <section id="mod-cursive" class="hidden space-y-4 max-w-4xl mx-auto">
+            <div class="flex items-center justify-between bg-white p-4 rounded-2xl shadow border-2 border-fuchsia-200">
+                <button onclick="switchModule('dashboard')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl flex items-center gap-2 btn-bounce">
+                    <i class="fa-solid fa-arrow-left"></i> <span data-i18n="btn_back">Voltar</span>
+                </button>
+                <div class="flex items-center gap-2">
+                    <h3 class="text-xl font-black text-fuchsia-900 font-cursive-school text-2xl" data-i18n="cursive_title">Escrita Cursiva ✍️</h3>
+                    <button onclick="speakInstruction('cursive')" class="bg-fuchsia-100 hover:bg-fuchsia-200 text-fuchsia-800 w-9 h-9 rounded-xl border-2 border-fuchsia-300 flex items-center justify-center text-base btn-bounce shadow-sm" title="Ouvir Instrução">
+                        <i class="fa-solid fa-volume-high"></i>
+                    </button>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="clearCursiveCanvas()" class="bg-rose-500 hover:bg-rose-600 text-white font-bold px-3 py-2 rounded-xl text-sm btn-bounce shadow flex items-center gap-1">
+                        <i class="fa-solid fa-eraser"></i> <span data-i18n="btn_clear">Limpar</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Seletor de Níveis da Caligrafia -->
+            <div class="flex items-center justify-center gap-2 bg-white p-2 rounded-2xl border-2 border-fuchsia-200 shadow-sm max-w-md mx-auto">
+                <span class="text-xs font-black text-fuchsia-700 uppercase tracking-wider mr-1" data-i18n="lbl_level">Nível:</span>
+                <button onclick="setCursiveLevel(1)" id="btn-cur-lvl-1" class="px-3 py-1.5 rounded-xl font-bold text-xs sm:text-sm btn-bounce transition-all">⭐ <span data-i18n="lvl_vowels">Vogais</span></button>
+                <button onclick="setCursiveLevel(2)" id="btn-cur-lvl-2" class="px-3 py-1.5 rounded-xl font-bold text-xs sm:text-sm btn-bounce transition-all">⭐⭐ <span data-i18n="lvl_common">Comuns</span></button>
+                <button onclick="setCursiveLevel(3)" id="btn-cur-lvl-3" class="px-3 py-1.5 rounded-xl font-bold text-xs sm:text-sm btn-bounce transition-all">⭐⭐⭐ <span data-i18n="lvl_all">Tudo A-Z</span></button>
+            </div>
+
+            <!-- Navegação de Letras do Alfabeto -->
+            <div class="bg-white rounded-3xl p-4 shadow-xl border-4 border-fuchsia-300 space-y-4">
+                <div class="flex items-center justify-between gap-2 bg-fuchsia-50 p-3 rounded-2xl border-2 border-fuchsia-200">
+                    <button onclick="changeCursiveLetter(-1)" class="bg-fuchsia-500 hover:bg-fuchsia-600 text-white font-extrabold px-4 py-2 rounded-xl btn-bounce shadow flex items-center gap-1">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </button>
+
+                    <div class="flex items-center gap-3">
+                        <span class="text-sm font-black text-fuchsia-900 hidden sm:inline" data-i18n="cursive_select_label">Escolhe a Letra:</span>
+                        <select id="cursive-letter-select" onchange="selectCursiveLetter(this.value)" class="bg-white border-2 border-fuchsia-300 text-fuchsia-900 font-extrabold px-4 py-2 rounded-xl text-xl shadow-sm focus:outline-none focus:border-fuchsia-500 font-cursive-school">
+                            <!-- Opções A-Z inseridas via JS -->
+                        </select>
+                    </div>
+
+                    <button onclick="changeCursiveLetter(1)" class="bg-fuchsia-500 hover:bg-fuchsia-600 text-white font-extrabold px-4 py-2 rounded-xl btn-bounce shadow flex items-center gap-1">
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+                </div>
+
+                <!-- Barra de Ferramentas de Desenho / Caligrafia -->
+                <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-50 p-3 rounded-2xl border-2 border-slate-200">
+                    <div class="flex items-center gap-2">
+                        <button onclick="setCursiveColor('#8B5CF6')" class="w-8 h-8 rounded-full bg-purple-600 border-2 border-white shadow btn-bounce"></button>
+                        <button onclick="setCursiveColor('#EF4444')" class="w-8 h-8 rounded-full bg-red-500 border-2 border-white shadow btn-bounce"></button>
+                        <button onclick="setCursiveColor('#3B82F6')" class="w-8 h-8 rounded-full bg-blue-500 border-2 border-white shadow btn-bounce"></button>
+                        <button onclick="setCursiveColor('#10B981')" class="w-8 h-8 rounded-full bg-emerald-500 border-2 border-white shadow btn-bounce"></button>
+                        <button onclick="setCursiveColor('#F59E0B')" class="w-8 h-8 rounded-full bg-amber-500 border-2 border-white shadow btn-bounce"></button>
+                        <button onclick="setCursiveColor('#000000')" class="w-8 h-8 rounded-full bg-black border-2 border-white shadow btn-bounce"></button>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-slate-500" data-i18n="draw_size_label">Tamanho:</span>
+                        <input id="cursive-brush-size" type="range" min="6" max="28" value="14" class="w-24 accent-fuchsia-500">
+                    </div>
+                </div>
+
+                <!-- Ecrã Dividido de Caligrafia (Guia de Traço + Espaço Livre para Escrever) -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Painel 1: Guia com Modelo -->
+                    <div class="flex flex-col gap-1.5">
+                        <span class="text-xs font-extrabold text-fuchsia-900 flex items-center gap-1.5 px-1 uppercase tracking-wide">
+                            <i class="fa-solid fa-pen-line text-fuchsia-600"></i> <span data-i18n="cursive_panel_guide">1. Passa por cima (Modelo)</span>
+                        </span>
+                        <div class="w-full h-[280px] sm:h-[340px] rounded-2xl overflow-hidden border-2 border-fuchsia-200 bg-white relative shadow-inner">
+                            <canvas id="cursive-canvas" class="w-full h-full cursor-crosshair"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Painel 2: Espaço para Escrever Livremente -->
+                    <div class="flex flex-col gap-1.5">
+                        <span class="text-xs font-extrabold text-fuchsia-900 flex items-center gap-1.5 px-1 uppercase tracking-wide">
+                            <i class="fa-solid fa-feather text-fuchsia-600"></i> <span data-i18n="cursive_panel_free">2. Escreve aqui sozinho(a)!</span>
+                        </span>
+                        <div class="w-full h-[280px] sm:h-[340px] rounded-2xl overflow-hidden border-2 border-fuchsia-300 bg-white relative shadow-inner">
+                            <canvas id="cursive-canvas-free" class="w-full h-full cursor-crosshair"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- MÓDULO 6: HISTÓRIAS MÁGICAS -->
+        <section id="mod-story" class="hidden space-y-4 max-w-2xl mx-auto">
+            <div class="flex items-center justify-between bg-white p-4 rounded-2xl shadow border-2 border-purple-200">
+                <button onclick="switchModule('dashboard')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl flex items-center gap-2 btn-bounce">
+                    <i class="fa-solid fa-arrow-left"></i> <span data-i18n="btn_back">Voltar</span>
+                </button>
+                <div class="flex items-center gap-2">
+                    <h3 class="text-xl font-black text-purple-900" data-i18n="story_title">Histórias Mágicas 📖</h3>
+                    <button onclick="speakInstruction('story')" class="bg-purple-100 hover:bg-purple-200 text-purple-800 w-9 h-9 rounded-xl border-2 border-purple-300 flex items-center justify-center text-base btn-bounce shadow-sm" title="Ouvir Instrução">
+                        <i class="fa-solid fa-volume-high"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-3xl p-6 shadow-xl border-4 border-purple-300 space-y-5">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-extrabold text-purple-900 mb-1" data-i18n="story_lbl_hero">Personagem Principal:</label>
+                        <select id="story-hero" class="w-full bg-purple-50 border-2 border-purple-200 rounded-xl p-2.5 font-bold text-slate-700 text-sm focus:outline-none focus:border-purple-400">
+                            <option value="um pequeno dinossauro curioso" data-i18n="opt_hero_dino">🦖 Dinossauro</option>
+                            <option value="uma unicórnio voadora" data-i18n="opt_hero_unicorn">🦄 Unicórnio</option>
+                            <option value="um robot muito amigável" data-i18n="opt_hero_robot">🤖 Robot</option>
+                            <option value="um gato explorador" data-i18n="opt_hero_cat">🐱 Gato</option>
+                            <option value="uma raposa astuta" data-i18n="opt_hero_fox">🦊 Raposa</option>
+                            <option value="um dragãozinho simpático" data-i18n="opt_hero_dragon">🐉 Dragão</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-extrabold text-purple-900 mb-1" data-i18n="story_lbl_animal">Companheiro Animal:</label>
+                        <select id="story-animal" class="w-full bg-purple-50 border-2 border-purple-200 rounded-xl p-2.5 font-bold text-slate-700 text-sm focus:outline-none focus:border-purple-400">
+                            <option value="um cãozinho brincalhão" data-i18n="opt_animal_dog">🐶 Cãozinho</option>
+                            <option value="um coelhinho saltitão" data-i18n="opt_animal_rabbit">🐰 Coelhinho</option>
+                            <option value="uma coruja sábia" data-i18n="opt_animal_owl">🦉 Coruja Sábia</option>
+                            <option value="um pinguim divertido" data-i18n="opt_animal_penguin">🐧 Pinguim</option>
+                            <option value="uma tartaruga paciente" data-i18n="opt_animal_turtle">🐢 Tartaruga</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-extrabold text-purple-900 mb-1" data-i18n="story_lbl_object">Objeto Mágico:</label>
+                        <select id="story-object" class="w-full bg-purple-50 border-2 border-purple-200 rounded-xl p-2.5 font-bold text-slate-700 text-sm focus:outline-none focus:border-purple-400">
+                            <option value="uma chave dourada misteriosa" data-i18n="opt_obj_key">🗝️ Chave Dourada</option>
+                            <option value="uma mochila voadora" data-i18n="opt_obj_bag">🎒 Mochila Voadora</option>
+                            <option value="um mapa do tesouro brilhante" data-i18n="opt_obj_map">🗺️ Mapa Mágico</option>
+                            <option value="uma varinha de estrelas" data-i18n="opt_obj_wand">🪄 Varinha Estelar</option>
+                            <option value="um espelho dos desejos" data-i18n="opt_obj_mirror">🪞 Espelho Mágico</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-extrabold text-purple-900 mb-1" data-i18n="story_lbl_place">Lugar:</label>
+                        <select id="story-place" class="w-full bg-purple-50 border-2 border-purple-200 rounded-xl p-2.5 font-bold text-slate-700 text-sm focus:outline-none focus:border-purple-400">
+                            <option value="numa floresta encantada" data-i18n="opt_place_forest">🌲 Floresta Mágica</option>
+                            <option value="num planeta distante no espaço" data-i18n="opt_place_space">🚀 Espaço Sideral</option>
+                            <option value="num castelo de doces" data-i18n="opt_place_candy">🏰 Castelo Doce</option>
+                            <option value="no fundo do oceano azul" data-i18n="opt_place_ocean">🌊 Fundo do Mar</option>
+                            <option value="numa cidade nas nuvens" data-i18n="opt_place_clouds">☁️ Cidade nas Nuvens</option>
+                            <option value="num jardim de cristais" data-i18n="opt_place_crystals">💎 Jardim de Cristais</option>
+                        </select>
+                    </div>
+
+                    <div class="sm:col-span-2 lg:col-span-2">
+                        <label class="block text-xs font-extrabold text-purple-900 mb-1" data-i18n="story_lbl_theme">Tema:</label>
+                        <select id="story-theme" class="w-full bg-purple-50 border-2 border-purple-200 rounded-xl p-2.5 font-bold text-slate-700 text-sm focus:outline-none focus:border-purple-400">
+                            <option value="à procura de um tesouro perdido" data-i18n="opt_theme_treasure">💎 O Tesouro Perdido</option>
+                            <option value="a aprender a voar bem alto" data-i18n="opt_theme_fly">✨ Aventura de Voar</option>
+                            <option value="a fazer uma grande amizade" data-i18n="opt_theme_friend">🤝 Grande Amizade</option>
+                            <option value="a resolver um mistério divertido" data-i18n="opt_theme_mystery">🔍 O Grande Mistério</option>
+                            <option value="numa festa surpresa inesquecível" data-i18n="opt_theme_party">🎉 Festa Surpresa</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button id="btn-generate-story" onclick="generateAIStory()" class="w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white font-black text-lg py-3.5 rounded-2xl shadow-lg border-b-4 border-indigo-800 btn-bounce flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> <span data-i18n="btn_create_story">Criar História Mágica</span>
+                </button>
+
+                <div id="story-output-container" class="hidden bg-purple-50 rounded-2xl p-5 border-2 border-purple-200 space-y-3">
+                    <div class="flex items-center justify-between border-b border-purple-200 pb-2">
+                        <h4 id="story-title" class="text-xl font-black text-purple-900 font-cursive-school"></h4>
+                        <button onclick="speakStory()" class="bg-purple-600 hover:bg-purple-700 text-white p-2 rounded-xl btn-bounce text-sm flex items-center gap-1">
+                            <i class="fa-solid fa-volume-high"></i> <span data-i18n="btn_listen">Ouvir</span>
+                        </button>
+                    </div>
+                    <p id="story-text" class="text-slate-700 font-medium leading-relaxed text-base sm:text-lg whitespace-pre-line"></p>
+                </div>
+            </div>
+        </section>
+
+        <!-- MÓDULO 7: ROBOT PROGRAMADOR -->
+        <section id="mod-robot" class="hidden space-y-4">
+            <div class="flex items-center justify-between bg-white p-4 rounded-2xl shadow border-2 border-indigo-200">
+                <button onclick="switchModule('dashboard')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl flex items-center gap-2 btn-bounce">
+                    <i class="fa-solid fa-arrow-left"></i> <span data-i18n="btn_back">Voltar</span>
+                </button>
+                <div class="flex items-center gap-2">
+                    <h3 class="text-xl font-black text-indigo-900" data-i18n="robot_title">Robot Programador 🤖</h3>
+                    <button onclick="speakInstruction('robot')" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-800 w-9 h-9 rounded-xl border-2 border-indigo-300 flex items-center justify-center text-base btn-bounce shadow-sm" title="Ouvir Instrução">
+                        <i class="fa-solid fa-volume-high"></i>
+                    </button>
+                </div>
+                <button onclick="initRobotGame()" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold px-4 py-2 rounded-xl text-sm btn-bounce shadow flex items-center gap-2">
+                    <i class="fa-solid fa-rotate-right"></i> <span data-i18n="btn_new_level">Novo Nível</span>
+                </button>
+            </div>
+
+            <!-- Seletor de Níveis do Robot -->
+            <div class="flex items-center justify-center gap-2 bg-white p-2 rounded-2xl border-2 border-indigo-200 shadow-sm max-w-md mx-auto">
+                <span class="text-xs font-black text-indigo-700 uppercase tracking-wider mr-1" data-i18n="lbl_level">Nível:</span>
+                <button onclick="setRobotLevel(1)" id="btn-robot-lvl-1" class="px-3 py-1.5 rounded-xl font-bold text-xs sm:text-sm btn-bounce transition-all">⭐ 1 (<span data-i18n="lvl_easy">Fácil</span>)</button>
+                <button onclick="setRobotLevel(2)" id="btn-robot-lvl-2" class="px-3 py-1.5 rounded-xl font-bold text-xs sm:text-sm btn-bounce transition-all">⭐⭐ 2 (<span data-i18n="lvl_medium">Médio</span>)</button>
+                <button onclick="setRobotLevel(3)" id="btn-robot-lvl-3" class="px-3 py-1.5 rounded-xl font-bold text-xs sm:text-sm btn-bounce transition-all">⭐⭐⭐ 3 (<span data-i18n="lvl_hard">Difícil</span>)</button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+                <!-- Tabuleiro do Robot -->
+                <div class="bg-white rounded-3xl p-5 shadow-xl border-4 border-indigo-300 flex flex-col items-center justify-center space-y-4">
+                    <div class="flex justify-between items-center w-full px-2">
+                        <span class="text-xs font-bold text-slate-500 uppercase" data-i18n="robot_lvl_tag">Nível do Robot</span>
+                        <span id="robot-level-indicator" class="bg-indigo-100 text-indigo-800 font-black px-3 py-1 rounded-xl text-sm">Nível 1</span>
+                    </div>
+
+                    <!-- Grelha 5x5 -->
+                    <div id="robot-grid" class="grid grid-cols-5 gap-2 bg-slate-100 p-3 rounded-2xl border-2 border-slate-300 w-full max-w-[320px] aspect-square">
+                        <!-- Células inseridas via JS -->
+                    </div>
+
+                    <div id="robot-feedback" class="h-10 text-center font-bold text-sm sm:text-base flex items-center justify-center px-2"></div>
+                </div>
+
+                <!-- Painel de Programação (Blocos de Comando) -->
+                <div class="bg-white rounded-3xl p-5 shadow-xl border-4 border-indigo-300 flex flex-col justify-between space-y-4">
+                    <div>
+                        <h4 class="text-lg font-black text-indigo-900 mb-2 flex items-center gap-2">
+                            <i class="fa-solid fa-code"></i> <span data-i18n="robot_panel_title">Painel de Comandos</span>
+                        </h4>
+                        <p class="text-xs text-slate-500 mb-3" data-i18n="robot_panel_desc">Toca nos botões para adicionar as instruções:</p>
+
+                        <!-- Botões de Adicionar Comandos com Setas Direcionais -->
+                        <div class="grid grid-cols-3 gap-2 mb-4">
+                            <button onclick="addRobotCommand('UP')" class="bg-blue-500 hover:bg-blue-600 text-white font-extrabold py-2.5 px-2 rounded-2xl shadow-md border-b-4 border-blue-700 btn-bounce flex flex-col items-center gap-1 text-xs">
+                                <i class="fa-solid fa-arrow-up text-base"></i>
+                                <span data-i18n="robot_btn_up">Cima</span>
+                            </button>
+                            <button onclick="addRobotCommand('DOWN')" class="bg-blue-500 hover:bg-blue-600 text-white font-extrabold py-2.5 px-2 rounded-2xl shadow-md border-b-4 border-blue-700 btn-bounce flex flex-col items-center gap-1 text-xs">
+                                <i class="fa-solid fa-arrow-down text-base"></i>
+                                <span data-i18n="robot_btn_down">Baixo</span>
+                            </button>
+                            <button onclick="addRobotCommand('LEFT')" class="bg-blue-500 hover:bg-blue-600 text-white font-extrabold py-2.5 px-2 rounded-2xl shadow-md border-b-4 border-blue-700 btn-bounce flex flex-col items-center gap-1 text-xs">
+                                <i class="fa-solid fa-arrow-left text-base"></i>
+                                <span data-i18n="robot_btn_left">Esquerda</span>
+                            </button>
+                            <button onclick="addRobotCommand('RIGHT')" class="bg-blue-500 hover:bg-blue-600 text-white font-extrabold py-2.5 px-2 rounded-2xl shadow-md border-b-4 border-blue-700 btn-bounce flex flex-col items-center gap-1 text-xs">
+                                <i class="fa-solid fa-arrow-right text-base"></i>
+                                <span data-i18n="robot_btn_right">Direita</span>
+                            </button>
+                            <button onclick="addRobotCommand('TURN_LEFT')" class="bg-purple-500 hover:bg-purple-600 text-white font-extrabold py-2.5 px-2 rounded-2xl shadow-md border-b-4 border-purple-700 btn-bounce flex flex-col items-center gap-1 text-xs">
+                                <i class="fa-solid fa-rotate-left text-base"></i>
+                                <span data-i18n="robot_btn_turn_l">Virar ↺</span>
+                            </button>
+                            <button onclick="addRobotCommand('TURN_RIGHT')" class="bg-purple-500 hover:bg-purple-600 text-white font-extrabold py-2.5 px-2 rounded-2xl shadow-md border-b-4 border-purple-700 btn-bounce flex flex-col items-center gap-1 text-xs">
+                                <i class="fa-solid fa-rotate-right text-base"></i>
+                                <span data-i18n="robot_btn_turn_r">Virar ↻</span>
+                            </button>
+                        </div>
+
+                        <!-- Lista / Sequência de Programação -->
+                        <div class="bg-slate-50 p-3 rounded-2xl border-2 border-dashed border-slate-300 min-h-[140px] max-h-[180px] overflow-y-auto">
+                            <p class="text-xs font-bold text-slate-400 mb-2 uppercase" data-i18n="robot_seq_label">Sequência do Programa:</p>
+                            <div id="robot-commands-list" class="flex flex-wrap gap-2">
+                                <!-- Passos inseridos via JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botões de Execução -->
+                    <div class="flex items-center gap-3">
+                        <button onclick="clearRobotCommands()" class="bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold px-4 py-3 rounded-2xl text-sm btn-bounce flex items-center gap-1.5">
+                            <i class="fa-solid fa-trash-can"></i> <span data-i18n="btn_clear">Limpar</span>
+                        </button>
+                        <button onclick="runRobotCode()" id="btn-run-robot" class="flex-grow bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-extrabold text-lg py-3 rounded-2xl shadow-lg border-b-4 border-teal-800 btn-bounce flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-play"></i> <span data-i18n="btn_run_robot">Executar Robot</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        let starsCount = 0;
+        let audioEnabled = true;
+        let currentLang = 'pt';
+
+        const translations = {
+            pt: {
+                app_subtitle: "Aprender a Jogar & Criar",
+                dash_greeting: "Que bom ter-te aqui! 👋",
+                dash_subtitle: "Escolha uma atividade divertida para jogar hoje no teu tablet ou computador!",
+                lbl_level: "Nível:",
+                lvl_easy: "Fácil",
+                lvl_medium: "Médio",
+                lvl_hard: "Difícil",
+                lvl_vowels: "Vogais",
+                lvl_common: "Comuns",
+                lvl_all: "Tudo A-Z",
+                card_memory_tag: "Desafio Visual",
+                card_memory_title: "Jogo da Memória",
+                card_memory_desc: "Encontra os pares de animais e objetos!",
+                card_math_tag: "Números & Contas",
+                card_math_title: "Matemática Divertida",
+                card_math_desc: "Somas, subtrações e contagem rápida!",
+                card_draw_tag: "Criatividade",
+                card_draw_title: "Atelier de Pintura",
+                card_draw_desc: "Desenha, pinta e solta a imaginação!",
+                card_words_tag: "Língua Portuguesa",
+                card_words_title: "Mundo das Palavras",
+                card_words_desc: "Toca nas letras para formar os nomes!",
+                card_cursive_tag: "Caligrafia",
+                card_cursive_title: "Escrita Cursiva",
+                card_cursive_desc: "Passa por cima com o dedo e treina a tua letra!",
+                card_story_tag: "Com IA",
+                card_story_title: "Histórias Mágicas",
+                card_story_desc: "Cria histórias infantis e ouve a leitura!",
+                card_robot_tag: "Lógica & Código",
+                card_robot_title: "Robot Programador",
+                card_robot_desc: "Programa o robot para alcançar a estrela!",
+                btn_back: "Voltar",
+                btn_new_game: "Novo Jogo",
+                btn_next: "Próxima",
+                btn_save: "Guardar",
+                btn_eraser: "🧽 Borracha",
+                btn_listen: "Ouvir",
+                btn_create_story: "Criar História Mágica",
+                btn_new_level: "Novo Nível",
+                btn_clear: "Limpar",
+                btn_run_robot: "Executar Robot",
+                mem_title: "Jogo da Memória 🧠",
+                mem_moves_label: "Jogadas:",
+                mem_pairs_label: "Pares:",
+                math_title: "Matemática Divertida 🔢",
+                math_streak_label: "Sequência Direta:",
+                draw_title: "Atelier de Pintura 🎨",
+                draw_size_label: "Tamanho:",
+                words_title: "Mundo das Palavras 🔤",
+                cursive_title: "Escrita Cursiva ✍️",
+                cursive_select_label: "Escolhe a Letra:",
+                cursive_panel_guide: "1. Passa por cima (Modelo)",
+                cursive_panel_free: "2. Escreve aqui sozinho(a)!",
+                story_title: "Histórias Mágicas 📖",
+                story_lbl_hero: "Personagem Principal:",
+                story_lbl_animal: "Companheiro Animal:",
+                story_lbl_object: "Objeto Mágico:",
+                story_lbl_place: "Lugar:",
+                story_lbl_theme: "Tema:",
+                opt_hero_dino: "🦖 Dinossauro",
+                opt_hero_unicorn: "🦄 Unicórnio",
+                opt_hero_robot: "🤖 Robot",
+                opt_hero_cat: "🐱 Gato",
+                opt_hero_fox: "🦊 Raposa",
+                opt_hero_dragon: "🐉 Dragão",
+                opt_animal_dog: "🐶 Cãozinho",
+                opt_animal_rabbit: "🐰 Coelhinho",
+                opt_animal_owl: "🦉 Coruja Sábia",
+                opt_animal_penguin: "🐧 Pinguim",
+                opt_animal_turtle: "🐢 Tartaruga",
+                opt_obj_key: "🗝️ Chave Dourada",
+                opt_obj_bag: "🎒 Mochila Voadora",
+                opt_obj_map: "🗺️ Mapa Mágico",
+                opt_obj_wand: "🪄 Varinha Estelar",
+                opt_obj_mirror: "🪞 Espelho Mágico",
+                opt_place_forest: "🌲 Floresta Mágica",
+                opt_place_space: "🚀 Espaço Sideral",
+                opt_place_candy: "🏰 Castelo Doce",
+                opt_place_ocean: "🌊 Fundo do Mar",
+                opt_place_clouds: "☁️ Cidade nas Nuvens",
+                opt_place_crystals: "💎 Jardim de Cristais",
+                opt_theme_treasure: "💎 O Tesouro Perdido",
+                opt_theme_fly: "✨ Aventura de Voar",
+                opt_theme_friend: "🤝 Grande Amizade",
+                opt_theme_mystery: "🔍 O Grande Mistério",
+                opt_theme_party: "🎉 Festa Surpresa",
+                robot_title: "Robot Programador 🤖",
+                robot_lvl_tag: "Nível do Robot",
+                robot_panel_title: "Painel de Comandos",
+                robot_panel_desc: "Toca nos botões para adicionar as instruções:",
+                robot_btn_up: "Cima",
+                robot_btn_down: "Baixo",
+                robot_btn_left: "Esquerda",
+                robot_btn_right: "Direita",
+                robot_btn_turn_l: "Virar ↺",
+                robot_btn_turn_r: "Virar ↻",
+                robot_seq_label: "Sequência do Programa:"
+            },
+            en: {
+                app_subtitle: "Learn, Play & Create",
+                dash_greeting: "Great to have you here! 👋",
+                dash_subtitle: "Choose a fun activity to play today on your tablet or computer!",
+                lbl_level: "Level:",
+                lvl_easy: "Easy",
+                lvl_medium: "Medium",
+                lvl_hard: "Hard",
+                lvl_vowels: "Vowels",
+                lvl_common: "Common",
+                lvl_all: "All A-Z",
+                card_memory_tag: "Visual Challenge",
+                card_memory_title: "Memory Game",
+                card_memory_desc: "Find matching pairs of animals and objects!",
+                card_math_tag: "Numbers & Math",
+                card_math_title: "Fun Math",
+                card_math_desc: "Addition, subtraction and quick counting!",
+                card_draw_tag: "Creativity",
+                card_draw_title: "Drawing Studio",
+                card_draw_desc: "Draw, paint and unleash your imagination!",
+                card_words_tag: "Word Builder",
+                card_words_title: "World of Words",
+                card_words_desc: "Tap letters to spell out the words!",
+                card_cursive_tag: "Handwriting",
+                card_cursive_title: "Cursive Writing",
+                card_cursive_desc: "Trace over letters with your finger and practice!",
+                card_story_tag: "AI Powered",
+                card_story_title: "Magic Stories",
+                card_story_desc: "Create kids' stories and listen to them!",
+                card_robot_tag: "Logic & Coding",
+                card_robot_title: "Robot Programmer",
+                card_robot_desc: "Program the robot to reach the star!",
+                btn_back: "Back",
+                btn_new_game: "New Game",
+                btn_next: "Next",
+                btn_save: "Save",
+                btn_eraser: "🧽 Eraser",
+                btn_listen: "Listen",
+                btn_create_story: "Create Magic Story",
+                btn_new_level: "New Level",
+                btn_clear: "Clear",
+                btn_run_robot: "Run Robot",
+                mem_title: "Memory Game 🧠",
+                mem_moves_label: "Moves:",
+                mem_pairs_label: "Pairs:",
+                math_title: "Fun Math 🔢",
+                math_streak_label: "Streak:",
+                draw_title: "Drawing Studio 🎨",
+                draw_size_label: "Size:",
+                words_title: "World of Words 🔤",
+                cursive_title: "Cursive Writing ✍️",
+                cursive_select_label: "Choose Letter:",
+                cursive_panel_guide: "1. Trace over (Model)",
+                cursive_panel_free: "2. Write here by yourself!",
+                story_title: "Magic Stories 📖",
+                story_lbl_hero: "Main Character:",
+                story_lbl_animal: "Animal Companion:",
+                story_lbl_object: "Magic Object:",
+                story_lbl_place: "Location:",
+                story_lbl_theme: "Theme:",
+                opt_hero_dino: "🦖 Dinosaur",
+                opt_hero_unicorn: "🦄 Unicorn",
+                opt_hero_robot: "🤖 Robot",
+                opt_hero_cat: "🐱 Cat",
+                opt_hero_fox: "🦊 Fox",
+                opt_hero_dragon: "🐉 Dragon",
+                opt_animal_dog: "🐶 Puppy",
+                opt_animal_rabbit: "🐰 Bunny",
+                opt_animal_owl: "🦉 Wise Owl",
+                opt_animal_penguin: "🐧 Penguin",
+                opt_animal_turtle: "🐢 Turtle",
+                opt_obj_key: "🗝️ Golden Key",
+                opt_obj_bag: "🎒 Flying Backpack",
+                opt_obj_map: "🗺️ Magic Map",
+                opt_obj_wand: "🪄 Star Wand",
+                opt_obj_mirror: "🪞 Magic Mirror",
+                opt_place_forest: "🌲 Magic Forest",
+                opt_place_space: "🚀 Outer Space",
+                opt_place_candy: "🏰 Candy Castle",
+                opt_place_ocean: "🌊 Deep Sea",
+                opt_place_clouds: "☁️ Cloud City",
+                opt_place_crystals: "💎 Crystal Garden",
+                opt_theme_treasure: "💎 Lost Treasure",
+                opt_theme_fly: "✨ Flying Adventure",
+                opt_theme_friend: "🤝 Great Friendship",
+                opt_theme_mystery: "🔍 Fun Mystery",
+                opt_theme_party: "🎉 Surprise Party",
+                robot_title: "Robot Programmer 🤖",
+                robot_lvl_tag: "Robot Level",
+                robot_panel_title: "Command Panel",
+                robot_panel_desc: "Tap the buttons to add instructions:",
+                robot_btn_up: "Up",
+                robot_btn_down: "Down",
+                robot_btn_left: "Left",
+                robot_btn_right: "Right",
+                robot_btn_turn_l: "Turn ↺",
+                robot_btn_turn_r: "Turn ↻",
+                robot_seq_label: "Program Sequence:"
+            }
+        };
+
+        const moduleInstructions = {
+            dashboard: {
+                pt: "Olá! Escolha uma das atividades do menu para começar a jogar e aprender.",
+                en: "Hello! Pick one of the activities from the menu to start playing and learning."
+            },
+            memory: {
+                pt: "Jogo da Memória. Toca nos cartões para os virar e encontra todos os pares iguais de animais e objetos!",
+                en: "Memory Game. Tap on the cards to flip them over and find all the matching pairs!"
+            },
+            math: {
+                pt: "Desafio da Matemática. Conta os objetos na imagem e clica no número com a resposta correta!",
+                en: "Math Challenge. Count the objects on the screen and click on the number with the correct answer!"
+            },
+            draw: {
+                pt: "Atelier de Pintura. Escolha uma cor e o tamanho do pincel para desenhar livremente o que quiseres!",
+                en: "Painting Atelier. Choose a color and brush size to freely draw whatever you like!"
+            },
+            words: {
+                pt: "Mundo das Palavras. Olha para a imagem e toca nas letras para formar o nome correto!",
+                en: "World of Words. Look at the picture and tap the letters to spell out the correct word!"
+            },
+            cursive: {
+                pt: "Escrita Cursiva Escolar. Pratica passando por cima no modelo ou escreve sozinho no espaço ao lado!",
+                en: "School Cursive Writing. Practice tracing over the model or write by yourself in the space next to it!"
+            },
+            story: {
+                pt: "Histórias Mágicas. Escolha a personagem, o amigo animal, o objeto mágico, o lugar e o tema, depois clica em Criar História Mágica!",
+                en: "Magic Stories. Choose a character, an animal friend, a magic object, a location, and a theme, then click Create Magic Story!"
+            },
+            robot: {
+                pt: "Robot Programador. Adiciona sequências de comandos para guiar o robot até à estrela mágica!",
+                en: "Programming Robot. Add command sequences to guide the robot to the magic star!"
+            }
+        };
+
+        function toggleLanguage() {
+            playSound('pop');
+            currentLang = currentLang === 'pt' ? 'en' : 'pt';
+            document.getElementById('lang-flag').textContent = currentLang === 'pt' ? '🇵🇹' : '🇬🇧';
+            document.getElementById('lang-text').textContent = currentLang.toUpperCase();
+            
+            updateLanguageUI();
+        }
+
+        function updateLanguageUI() {
+            const elements = document.querySelectorAll('[data-i18n]');
+            elements.forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (translations[currentLang] && translations[currentLang][key]) {
+                    el.textContent = translations[currentLang][key];
+                }
+            });
+
+            const lvlIndicator = document.getElementById('robot-level-indicator');
+            if (lvlIndicator) {
+                lvlIndicator.textContent = currentLang === 'pt' ? `Nível ${robotLevel}` : `Level ${robotLevel}`;
+            }
+
+            updateLevelButtons('mem', memoryLevel, 'border-pink-500 bg-pink-500 text-white shadow-md');
+            updateLevelButtons('math', mathLevel, 'border-amber-500 bg-amber-500 text-white shadow-md');
+            updateLevelButtons('word', wordLevel, 'border-blue-500 bg-blue-500 text-white shadow-md');
+            updateLevelButtons('cur', cursiveLevel, 'border-fuchsia-500 bg-fuchsia-500 text-white shadow-md');
+            updateLevelButtons('robot', robotLevel, 'border-indigo-500 bg-indigo-500 text-white shadow-md');
+
+            const activeModule = ['memory', 'math', 'draw', 'words', 'cursive', 'story', 'robot'].find(m => {
+                const el = document.getElementById(`mod-${m}`);
+                return el && !el.classList.contains('hidden');
+            });
+
+            if (activeModule === 'math') initMathGame();
+            if (activeModule === 'words') loadWordGame();
+            if (activeModule === 'cursive') renderCursiveBackground();
+            if (activeModule === 'robot') renderRobotCommands();
+        }
+
+        let audioCtx = null;
+        function playSound(type) {
+            if (!audioEnabled) return;
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                const now = audioCtx.currentTime;
+
+                if (type === 'pop') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.exponentialRampToValueAtTime(800, now + 0.08);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
+                    osc.start(now);
+                    osc.stop(now + 0.08);
+                } else if (type === 'correct') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(523.25, now);
+                    osc.frequency.setValueAtTime(659.25, now + 0.1);
+                    osc.frequency.setValueAtTime(783.99, now + 0.2);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.35);
+                    osc.start(now);
+                    osc.stop(now + 0.35);
+                } else if (type === 'star') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(523.25, now);
+                    osc.frequency.setValueAtTime(659.25, now + 0.08);
+                    osc.frequency.setValueAtTime(783.99, now + 0.16);
+                    osc.frequency.setValueAtTime(1046.50, now + 0.24);
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.45);
+                    osc.start(now);
+                    osc.stop(now + 0.45);
+                } else if (type === 'wrong') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(180, now);
+                    osc.frequency.linearRampToValueAtTime(110, now + 0.25);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                }
+            } catch (e) {
+                console.error('Audio error:', e);
+            }
+        }
+
+        function addStar() {
+            starsCount++;
+            document.getElementById('global-stars').textContent = starsCount;
+            playSound('star');
+        }
+
+        function switchModule(modId) {
+            playSound('pop');
+            const modules = ['dashboard', 'memory', 'math', 'draw', 'words', 'cursive', 'story', 'robot'];
+            modules.forEach(m => {
+                const el = document.getElementById(`mod-${m}`);
+                if (el) el.classList.add('hidden');
+            });
+
+            const targetEl = document.getElementById(`mod-${modId}`);
+            if (targetEl) targetEl.classList.remove('hidden');
+
+            if (modId === 'memory') initMemoryGame();
+            else if (modId === 'math') initMathGame();
+            else if (modId === 'draw') setTimeout(initCanvas, 100);
+            else if (modId === 'words') initWordsGame();
+            else if (modId === 'cursive') setTimeout(initCursiveGame, 100);
+            else if (modId === 'robot') initRobotGame();
+
+            speakInstruction(modId);
+        }
+
+        function speakInstruction(modId) {
+            if (!audioEnabled || !('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel();
+            const text = moduleInstructions[modId]?.[currentLang] || '';
+            if (!text) return;
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = currentLang === 'pt' ? 'pt-PT' : 'en-GB';
+            utterance.rate = 0.9;
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function toggleAudio() {
+            audioEnabled = !audioEnabled;
+            const icon = document.getElementById('audio-icon');
+            if (icon) {
+                icon.className = audioEnabled ? 'fa-solid fa-volume-high' : 'fa-solid fa-volume-xmark';
+            }
+            if (!audioEnabled && 'speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            } else {
+                if (document.exitFullscreen) document.exitFullscreen();
+            }
+        }
+
+        /* Gestor Geral de Botões de Nível */
+        function updateLevelButtons(module, activeLvl, activeClass) {
+            [1, 2, 3].forEach(lvl => {
+                const btn = document.getElementById(`btn-${module}-lvl-${lvl}`);
+                if (!btn) return;
+                if (lvl === activeLvl) {
+                    btn.className = `px-3 py-1.5 rounded-xl font-black text-xs sm:text-sm btn-bounce border-2 scale-105 transition-all ${activeClass}`;
+                } else {
+                    btn.className = 'px-3 py-1.5 rounded-xl font-bold text-xs sm:text-sm btn-bounce text-slate-600 bg-slate-100 hover:bg-slate-200 border-2 border-transparent transition-all';
+                }
+            });
+        }
+        let memoryCards = [];
+        let flippedCards = [];
+        let matchedPairs = 0;
+        let memoryMoves = 0;
+        let isMemoryLock = false;
+        let memoryLevel = 2; // 1: 4 pares (8 cartas), 2: 6 pares (12 cartas), 3: 8 pares (16 cartas)
+
+        function setMemoryLevel(lvl) {
+            playSound('pop');
+            memoryLevel = lvl;
+            updateLevelButtons('mem', lvl, 'border-pink-500 bg-pink-500 text-white shadow-md');
+            initMemoryGame();
+        }
+
+        function initMemoryGame() {
+            const grid = document.getElementById('memory-grid');
+            if (!grid) return;
+
+            updateLevelButtons('mem', memoryLevel, 'border-pink-500 bg-pink-500 text-white shadow-md');
+
+            const allItems = ['🐶', '🐱', '🐰', '🦊', '🦁', '🐸', '🐼', '🐵'];
+            const pairCount = memoryLevel === 1 ? 4 : (memoryLevel === 2 ? 6 : 8);
+            const items = allItems.slice(0, pairCount);
+            const deck = [...items, ...items].sort(() => Math.random() - 0.5);
+
+            memoryCards = deck;
+            flippedCards = [];
+            matchedPairs = 0;
+            memoryMoves = 0;
+            isMemoryLock = false;
+
+            document.getElementById('mem-moves').textContent = '0';
+            document.getElementById('mem-matches').textContent = `0/${items.length}`;
+            grid.innerHTML = '';
+
+            // Ajustar grelha consoante a quantidade de cartões
+            grid.className = memoryLevel === 1 
+                ? 'grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 p-2 max-w-lg mx-auto'
+                : (memoryLevel === 2 
+                    ? 'grid grid-cols-3 sm:grid-cols-4 gap-3 sm:gap-4 p-2'
+                    : 'grid grid-cols-4 gap-2 sm:gap-3 p-2');
+
+            deck.forEach((item) => {
+                const card = document.createElement('div');
+                card.className = 'card perspective-1000 h-28 sm:h-32 cursor-pointer btn-bounce';
+                card.innerHTML = `
+                    <div class="card-inner w-full h-full">
+                        <div class="card-front bg-gradient-to-br from-pink-400 to-rose-400 text-white text-3xl font-bold border-4 border-white">
+                            ❓
+                        </div>
+                        <div class="card-back bg-white text-4xl border-4 border-pink-300">
+                            ${item}
+                        </div>
+                    </div>
+                `;
+                card.onclick = () => flipMemoryCard(card, item);
+                grid.appendChild(card);
+            });
+        }
+
+        function flipMemoryCard(card, item) {
+            if (isMemoryLock || card.classList.contains('flipped') || flippedCards.includes(card)) return;
+
+            playSound('pop');
+            card.classList.add('flipped');
+            flippedCards.push({ card, item });
+
+            const targetPairs = memoryLevel === 1 ? 4 : (memoryLevel === 2 ? 6 : 8);
+
+            if (flippedCards.length === 2) {
+                memoryMoves++;
+                document.getElementById('mem-moves').textContent = memoryMoves;
+                isMemoryLock = true;
+
+                const [first, second] = flippedCards;
+                if (first.item === second.item) {
+                    matchedPairs++;
+                    document.getElementById('mem-matches').textContent = `${matchedPairs}/${targetPairs}`;
+                    playSound('correct');
+                    flippedCards = [];
+                    isMemoryLock = false;
+
+                    if (matchedPairs === targetPairs) {
+                        setTimeout(() => {
+                            addStar();
+                            playSound('star');
+                        }, 300);
+                    }
+                } else {
+                    setTimeout(() => {
+                        playSound('wrong');
+                        first.card.classList.remove('flipped');
+                        second.card.classList.remove('flipped');
+                        flippedCards = [];
+                        isMemoryLock = false;
+                    }, 800);
+                }
+            }
+        }
+
+        let mathAnswer = 0;
+        let mathStreak = 0;
+        let mathLevel = 1; // 1: 1-5, 2: 1-10, 3: 1-20
+
+        function setMathLevel(lvl) {
+            playSound('pop');
+            mathLevel = lvl;
+            updateLevelButtons('math', lvl, 'border-amber-500 bg-amber-500 text-white shadow-md');
+            initMathGame();
+        }
+
+        function initMathGame() {
+            const visualArea = document.getElementById('math-visual-area');
+            const questionText = document.getElementById('math-question-text');
+            const optionsGrid = document.getElementById('math-options-grid');
+            const feedback = document.getElementById('math-feedback');
+            if (!visualArea || !questionText || !optionsGrid) return;
+
+            updateLevelButtons('math', mathLevel, 'border-amber-500 bg-amber-500 text-white shadow-md');
+            feedback.textContent = '';
+            
+            const emojis = ['🍎', '⭐️', '🎈', '🚗', '🐱', '🐶', '🍕', '🌼'];
+            const emoji = emojis[Math.floor(Math.random() * emojis.length)];
+
+            const isAddition = Math.random() > 0.35;
+            let num1, num2;
+
+            if (mathLevel === 1) {
+                // Nível 1: Até 5
+                if (isAddition) {
+                    num1 = Math.floor(Math.random() * 3) + 1;
+                    num2 = Math.floor(Math.random() * 2) + 1;
+                    mathAnswer = num1 + num2;
+                } else {
+                    num1 = Math.floor(Math.random() * 3) + 2;
+                    num2 = Math.floor(Math.random() * (num1 - 1)) + 1;
+                    mathAnswer = num1 - num2;
+                }
+            } else if (mathLevel === 2) {
+                // Nível 2: Até 10
+                if (isAddition) {
+                    num1 = Math.floor(Math.random() * 5) + 1;
+                    num2 = Math.floor(Math.random() * 5) + 1;
+                    mathAnswer = num1 + num2;
+                } else {
+                    num1 = Math.floor(Math.random() * 6) + 4;
+                    num2 = Math.floor(Math.random() * (num1 - 1)) + 1;
+                    mathAnswer = num1 - num2;
+                }
+            } else {
+                // Nível 3: Até 20
+                if (isAddition) {
+                    num1 = Math.floor(Math.random() * 9) + 6;
+                    num2 = Math.floor(Math.random() * 5) + 1;
+                    mathAnswer = num1 + num2;
+                } else {
+                    num1 = Math.floor(Math.random() * 9) + 11;
+                    num2 = Math.floor(Math.random() * 6) + 2;
+                    mathAnswer = num1 - num2;
+                }
+            }
+
+            questionText.textContent = isAddition
+                ? (currentLang === 'pt' ? `Quanto é ${num1} + ${num2}?` : `What is ${num1} + ${num2}?`)
+                : (currentLang === 'pt' ? `Quanto é ${num1} - ${num2}?` : `What is ${num1} - ${num2}?`);
+
+            // Apresentação visual
+            let visualHTML = '';
+            const maxIcons = Math.min(num1, 10);
+            for (let i = 0; i < maxIcons; i++) visualHTML += `<span class="animate-pulse">${emoji}</span>`;
+            if (num1 > 10) visualHTML += `<span class="text-sm font-black text-amber-700 self-center">(${num1})</span>`;
+
+            visualHTML += `<span class="text-amber-600 font-black px-2">${isAddition ? '+' : '-'}</span>`;
+
+            const maxIcons2 = Math.min(num2, 10);
+            for (let i = 0; i < maxIcons2; i++) visualHTML += `<span class="animate-pulse opacity-80">${emoji}</span>`;
+            if (num2 > 10) visualHTML += `<span class="text-sm font-black text-amber-700 self-center">(${num2})</span>`;
+
+            visualArea.innerHTML = visualHTML;
+
+            const options = new Set([mathAnswer]);
+            while (options.size < 4) {
+                let wrong = mathAnswer + (Math.floor(Math.random() * 5) - 2);
+                if (wrong >= 0 && wrong !== mathAnswer) options.add(wrong);
+                else options.add(Math.floor(Math.random() * (mathLevel === 3 ? 20 : 10)) + 1);
+            }
+
+            const sortedOptions = Array.from(options).sort(() => Math.random() - 0.5);
+            optionsGrid.innerHTML = '';
+
+            sortedOptions.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'bg-amber-400 hover:bg-amber-500 text-amber-950 font-black text-2xl py-4 rounded-2xl shadow-md border-b-4 border-amber-600 btn-bounce';
+                btn.textContent = opt;
+                btn.onclick = () => checkMathAnswer(opt);
+                optionsGrid.appendChild(btn);
+            });
+        }
+
+        function checkMathAnswer(selected) {
+            const feedback = document.getElementById('math-feedback');
+            if (selected === mathAnswer) {
+                playSound('correct');
+                addStar();
+                mathStreak++;
+                document.getElementById('math-streak').textContent = mathStreak;
+                feedback.textContent = currentLang === 'pt' ? '🎉 Resposta Correta! Excelente!' : '🎉 Correct Answer! Great job!';
+                feedback.className = 'h-8 text-center font-black text-xl text-emerald-600';
+                setTimeout(initMathGame, 1200);
+            } else {
+                playSound('wrong');
+                mathStreak = 0;
+                document.getElementById('math-streak').textContent = '0';
+                feedback.textContent = currentLang === 'pt' ? '❌ Tenta outra vez!' : '❌ Try again!';
+                feedback.className = 'h-8 text-center font-black text-xl text-rose-500';
+            }
+        }
+
+        let paintCanvas, paintCtx;
+        let isPainting = false;
+        let drawColor = '#EF4444';
+        let isEraser = false;
+
+        function initCanvas() {
+            paintCanvas = document.getElementById('paint-canvas');
+            if (!paintCanvas) return;
+
+            const container = paintCanvas.parentElement;
+            paintCanvas.width = container.clientWidth;
+            paintCanvas.height = container.clientHeight;
+            paintCtx = paintCanvas.getContext('2d');
+
+            paintCtx.fillStyle = '#FFFFFF';
+            paintCtx.fillRect(0, 0, paintCanvas.width, paintCanvas.height);
+
+            const startDraw = (e) => {
+                isPainting = true;
+                const rect = paintCanvas.getBoundingClientRect();
+                paintCtx.beginPath();
+                paintCtx.lineCap = 'round';
+                paintCtx.lineJoin = 'round';
+                paintCtx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+            };
+
+            const doDraw = (e) => {
+                if (!isPainting) return;
+                const rect = paintCanvas.getBoundingClientRect();
+                const brushSize = document.getElementById('brush-size').value;
+
+                paintCtx.strokeStyle = isEraser ? '#FFFFFF' : drawColor;
+                paintCtx.lineWidth = brushSize;
+                paintCtx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+                paintCtx.stroke();
+            };
+
+            const stopDraw = () => { isPainting = false; };
+
+            paintCanvas.addEventListener('mousedown', startDraw);
+            paintCanvas.addEventListener('mousemove', doDraw);
+            paintCanvas.addEventListener('mouseup', stopDraw);
+            paintCanvas.addEventListener('mouseleave', stopDraw);
+
+            paintCanvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDraw(e.touches[0]); });
+            paintCanvas.addEventListener('touchmove', (e) => { e.preventDefault(); doDraw(e.touches[0]); });
+            paintCanvas.addEventListener('touchend', stopDraw);
+        }
+
+        function setDrawColor(color) {
+            playSound('pop');
+            drawColor = color;
+            isEraser = false;
+        }
+
+        function setEraser() {
+            playSound('pop');
+            isEraser = true;
+        }
+
+        function clearCanvas() {
+            playSound('pop');
+            if (paintCtx && paintCanvas) {
+                paintCtx.fillStyle = '#FFFFFF';
+                paintCtx.fillRect(0, 0, paintCanvas.width, paintCanvas.height);
+            }
+        }
+
+        function downloadCanvas() {
+            playSound('star');
+            if (!paintCanvas) return;
+            const link = document.createElement('a');
+            link.download = 'edukids-desenho.png';
+            link.href = paintCanvas.toDataURL();
+            link.click();
+        }
+
+        const wordsData = {
+            pt: {
+                1: [
+                    { word: 'CAO', emoji: '🐶' },
+                    { word: 'SOL', emoji: '☀️' },
+                    { word: 'LUA', emoji: '🌙' },
+                    { word: 'REI', emoji: '👑' },
+                    { word: 'UVA', emoji: '🍇' },
+                    { word: 'CHA', emoji: '🍵' }
+                ],
+                2: [
+                    { word: 'GATO', emoji: '🐱' },
+                    { word: 'BOLA', emoji: '⚽' },
+                    { word: 'CASA', emoji: '🏠' },
+                    { word: 'PATO', emoji: '🦆' },
+                    { word: 'SAPO', emoji: '🐸' },
+                    { word: 'URSO', emoji: '🐻' }
+                ],
+                3: [
+                    { word: 'MACA', emoji: '🍎' },
+                    { word: 'LIVRO', emoji: '📚' },
+                    { word: 'TIGRE', emoji: '🐯' },
+                    { word: 'AVIAO', emoji: '✈️' },
+                    { word: 'COELHO', emoji: '🐰' }
+                ]
+            },
+            en: {
+                1: [
+                    { word: 'CAT', emoji: '🐱' },
+                    { word: 'DOG', emoji: '🐶' },
+                    { word: 'SUN', emoji: '☀️' },
+                    { word: 'CAR', emoji: '🚗' },
+                    { word: 'BAT', emoji: '🦇' },
+                    { word: 'CUP', emoji: '☕' }
+                ],
+                2: [
+                    { word: 'BALL', emoji: '⚽' },
+                    { word: 'DUCK', emoji: '🦆' },
+                    { word: 'FISH', emoji: '🐟' },
+                    { word: 'FROG', emoji: '🐸' },
+                    { word: 'BEAR', emoji: '🐻' },
+                    { word: 'LION', emoji: '🦁' }
+                ],
+                3: [
+                    { word: 'APPLE', emoji: '🍎' },
+                    { word: 'BOOK', emoji: '📚' },
+                    { word: 'TIGER', emoji: '🐯' },
+                    { word: 'PLANE', emoji: '✈️' },
+                    { word: 'RABBIT', emoji: '🐰' }
+                ]
+            }
+        };
+
+        let currentWordIdx = 0;
+        let wordSlotsState = [];
+        let wordLevel = 1; // 1: 3 letras, 2: 4 letras, 3: 5+ letras
+
+        function setWordLevel(lvl) {
+            playSound('pop');
+            wordLevel = lvl;
+            currentWordIdx = 0;
+            updateLevelButtons('word', lvl, 'border-blue-500 bg-blue-500 text-white shadow-md');
+            loadWordGame();
+        }
+
+        function initWordsGame() {
+            currentWordIdx = 0;
+            updateLevelButtons('word', wordLevel, 'border-blue-500 bg-blue-500 text-white shadow-md');
+            loadWordGame();
+        }
+
+        function loadWordGame() {
+            const langDict = wordsData[currentLang] || wordsData.pt;
+            const list = langDict[wordLevel] || langDict[1];
+            const item = list[currentWordIdx % list.length];
+
+            document.getElementById('word-emoji').textContent = item.emoji;
+            document.getElementById('word-feedback').textContent = '';
+
+            wordSlotsState = Array(item.word.length).fill('');
+
+            renderWordSlots();
+            renderWordBank(item.word);
+        }
+
+        function nextWordGame() {
+            playSound('pop');
+            currentWordIdx++;
+            loadWordGame();
+        }
+
+        function renderWordSlots() {
+            const slotsContainer = document.getElementById('word-slots');
+            if (!slotsContainer) return;
+            slotsContainer.innerHTML = '';
+
+            wordSlotsState.forEach((char, idx) => {
+                const slot = document.createElement('button');
+                slot.className = 'w-12 h-14 sm:w-14 sm:h-16 rounded-2xl bg-blue-100 border-4 border-blue-400 text-blue-900 font-black text-2xl flex items-center justify-center shadow-inner btn-bounce';
+                slot.textContent = char;
+                slot.onclick = () => removeWordSlot(idx);
+                slotsContainer.appendChild(slot);
+            });
+        }
+
+        function renderWordBank(targetWord) {
+            const bankContainer = document.getElementById('word-letters-bank');
+            if (!bankContainer) return;
+            bankContainer.innerHTML = '';
+
+            const alphabetChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            const extraLetters = Array.from({ length: 3 }, () => alphabetChars[Math.floor(Math.random() * alphabetChars.length)]);
+            const letters = [...targetWord.split(''), ...extraLetters].sort(() => Math.random() - 0.5);
+
+            letters.forEach((char) => {
+                const btn = document.createElement('button');
+                btn.className = 'w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-blue-500 hover:bg-blue-600 text-white font-black text-2xl shadow-md border-b-4 border-blue-700 btn-bounce flex items-center justify-center';
+                btn.textContent = char;
+                btn.onclick = () => pickWordLetter(char, btn);
+                bankContainer.appendChild(btn);
+            });
+        }
+
+        function pickWordLetter(char, btn) {
+            const emptyIdx = wordSlotsState.indexOf('');
+            if (emptyIdx === -1) return;
+
+            playSound('pop');
+            wordSlotsState[emptyIdx] = char;
+            btn.disabled = true;
+            btn.classList.add('opacity-30', 'pointer-events-none');
+            btn.dataset.slotIdx = emptyIdx;
+
+            renderWordSlots();
+            checkWordComplete();
+        }
+
+        function removeWordSlot(idx) {
+            if (!wordSlotsState[idx]) return;
+            playSound('pop');
+
+            wordSlotsState[idx] = '';
+
+            const bankBtns = document.querySelectorAll('#word-letters-bank button');
+            for (let btn of bankBtns) {
+                if (btn.dataset.slotIdx == idx) {
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-30', 'pointer-events-none');
+                    delete btn.dataset.slotIdx;
+                    break;
+                }
+            }
+
+            renderWordSlots();
+            document.getElementById('word-feedback').textContent = '';
+        }
+
+        function checkWordComplete() {
+            if (wordSlotsState.includes('')) return;
+
+            const langDict = wordsData[currentLang] || wordsData.pt;
+            const list = langDict[wordLevel] || langDict[1];
+            const targetWord = list[currentWordIdx % list.length].word;
+            const userWord = wordSlotsState.join('');
+            const feedback = document.getElementById('word-feedback');
+
+            if (userWord === targetWord) {
+                playSound('correct');
+                addStar();
+                feedback.textContent = currentLang === 'pt' ? '🎉 Excelente! Palavra Certa!' : '🎉 Excellent! Correct Word!';
+                feedback.className = 'h-8 text-center font-black text-xl text-emerald-600';
+                setTimeout(nextWordGame, 1200);
+            } else {
+                playSound('wrong');
+                feedback.textContent = currentLang === 'pt' ? '❌ Palavra Incorreta! Tenta novamente.' : '❌ Incorrect Word! Try again.';
+                feedback.className = 'h-8 text-center font-black text-xl text-rose-500';
+            }
+        }
+
+        /* ------------------------------------------------------------------
+           MÓDULO 5: ESCRITA CURSIVA (LETRA ESCOLAR EXACTA - DUAL CANVAS)
+        ------------------------------------------------------------------ */
+        let cursiveCanvas, cursiveCtx, isCursiveTracing = false;
+        let cursiveFreeCanvas, cursiveFreeCtx, isCursiveFreeTracing = false;
+        let selectedCursiveLetter = 'A';
+        let cursiveBrushColor = '#8B5CF6';
+        let cursiveLevel = 3; // 1: Vogais, 2: Letras Comuns, 3: Todas A-Z
+
+        const alphabetAll = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+        const alphabetVowels = ['A', 'E', 'I', 'O', 'U'];
+        const alphabetCommon = ['A', 'B', 'C', 'D', 'E', 'I', 'L', 'M', 'O', 'P', 'R', 'S', 'T', 'U'];
+
+        function getCurrentAlphabet() {
+            if (cursiveLevel === 1) return alphabetVowels;
+            if (cursiveLevel === 2) return alphabetCommon;
+            return alphabetAll;
+        }
+
+        function setCursiveLevel(lvl) {
+            playSound('pop');
+            cursiveLevel = lvl;
+            updateLevelButtons('cur', lvl, 'border-fuchsia-500 bg-fuchsia-500 text-white shadow-md');
+            
+            const currentList = getCurrentAlphabet();
+            if (!currentList.includes(selectedCursiveLetter)) {
+                selectedCursiveLetter = currentList[0];
+            }
+            populateCursiveSelect();
+            renderCursiveBackground();
+        }
+
+        function populateCursiveSelect() {
+            const select = document.getElementById('cursive-letter-select');
+            if (!select) return;
+            select.innerHTML = '';
+
+            const list = getCurrentAlphabet();
+            list.forEach(letter => {
+                const opt = document.createElement('option');
+                opt.value = letter;
+                opt.textContent = `${letter} ${letter.toLowerCase()}`;
+                if (letter === selectedCursiveLetter) opt.selected = true;
+                select.appendChild(opt);
+            });
+        }
+
+        function initCursiveGame() {
+            updateLevelButtons('cur', cursiveLevel, 'border-fuchsia-500 bg-fuchsia-500 text-white shadow-md');
+            populateCursiveSelect();
+
+            // Canvas 1: Modelo & Traço
+            cursiveCanvas = document.getElementById('cursive-canvas');
+            if (cursiveCanvas) {
+                const container = cursiveCanvas.parentElement;
+                cursiveCanvas.width = container.clientWidth;
+                cursiveCanvas.height = container.clientHeight;
+                cursiveCtx = cursiveCanvas.getContext('2d');
+
+                cursiveCanvas.addEventListener('mousedown', (e) => startTrace(e, cursiveCtx, cursiveCanvas, 'guide'));
+                cursiveCanvas.addEventListener('mousemove', (e) => doTrace(e, cursiveCtx, cursiveCanvas, 'guide'));
+                cursiveCanvas.addEventListener('mouseup', () => stopTrace('guide'));
+                cursiveCanvas.addEventListener('mouseleave', () => stopTrace('guide'));
+
+                cursiveCanvas.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    startTrace(e.touches[0], cursiveCtx, cursiveCanvas, 'guide');
+                });
+                cursiveCanvas.addEventListener('touchmove', (e) => {
+                    e.preventDefault();
+                    doTrace(e.touches[0], cursiveCtx, cursiveCanvas, 'guide');
+                });
+                cursiveCanvas.addEventListener('touchend', () => stopTrace('guide'));
+            }
+
+            // Canvas 2: Espaço para Escrever Livremente (Sem Modelo)
+            cursiveFreeCanvas = document.getElementById('cursive-canvas-free');
+            if (cursiveFreeCanvas) {
+                const containerFree = cursiveFreeCanvas.parentElement;
+                cursiveFreeCanvas.width = containerFree.clientWidth;
+                cursiveFreeCanvas.height = containerFree.clientHeight;
+                cursiveFreeCtx = cursiveFreeCanvas.getContext('2d');
+
+                cursiveFreeCanvas.addEventListener('mousedown', (e) => startTrace(e, cursiveFreeCtx, cursiveFreeCanvas, 'free'));
+                cursiveFreeCanvas.addEventListener('mousemove', (e) => doTrace(e, cursiveFreeCtx, cursiveFreeCanvas, 'free'));
+                cursiveFreeCanvas.addEventListener('mouseup', () => stopTrace('free'));
+                cursiveFreeCanvas.addEventListener('mouseleave', () => stopTrace('free'));
+
+                cursiveFreeCanvas.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    startTrace(e.touches[0], cursiveFreeCtx, cursiveFreeCanvas, 'free');
+                });
+                cursiveFreeCanvas.addEventListener('touchmove', (e) => {
+                    e.preventDefault();
+                    doTrace(e.touches[0], cursiveFreeCtx, cursiveFreeCanvas, 'free');
+                });
+                cursiveFreeCanvas.addEventListener('touchend', () => stopTrace('free'));
+            }
+
+            document.fonts.ready.then(() => renderCursiveBackground());
+            renderCursiveBackground();
+        }
+
+        function selectCursiveLetter(letter) {
+            playSound('pop');
+            selectedCursiveLetter = letter;
+            renderCursiveBackground();
+        }
+
+        function changeCursiveLetter(direction) {
+            const list = getCurrentAlphabet();
+            let idx = list.indexOf(selectedCursiveLetter);
+            if (idx === -1) idx = 0;
+            idx = (idx + direction + list.length) % list.length;
+            selectedCursiveLetter = list[idx];
+            document.getElementById('cursive-letter-select').value = selectedCursiveLetter;
+            selectCursiveLetter(selectedCursiveLetter);
+        }
+
+        function setCursiveColor(color) {
+            playSound('pop');
+            cursiveBrushColor = color;
+        }
+
+        function drawCalligraphyLines(ctx, w, h) {
+            ctx.clearRect(0, 0, w, h);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, w, h);
+
+            // Desenhar pauta escolar de caligrafia (linhas de caligrafia)
+            const lineGap = h / 6;
+            ctx.lineWidth = 2;
+
+            for (let i = 1; i <= 5; i++) {
+                const y = i * lineGap;
+                ctx.beginPath();
+                ctx.setLineDash(i === 2 || i === 4 ? [6, 6] : []);
+                ctx.strokeStyle = (i === 2 || i === 4) ? '#CBD5E1' : '#94A3B8';
+                ctx.moveTo(20, y);
+                ctx.lineTo(w - 20, y);
+                ctx.stroke();
+            }
+            ctx.setLineDash([]);
+        }
+
+        function renderCursiveBackground() {
+            if (cursiveCtx && cursiveCanvas) {
+                const w = cursiveCanvas.width;
+                const h = cursiveCanvas.height;
+                cursiveCtx.clearRect(0, 0, w, h);
+                cursiveCtx.fillStyle = '#FFFFFF';
+                cursiveCtx.fillRect(0, 0, w, h);
+
+                // Desenhar guia da letra sem traços a atravessar no meio (Apenas no Canvas 1)
+                const textToDraw = `${selectedCursiveLetter} ${selectedCursiveLetter.toLowerCase()}`;
+                const fontSize = Math.min(w * 0.22, h * 0.45);
+
+                cursiveCtx.save();
+                cursiveCtx.font = `400 ${fontSize}px 'Playwrite PT', 'Dancing Script', cursive`;
+                cursiveCtx.textAlign = 'center';
+                cursiveCtx.textBaseline = 'middle';
+
+                // Guia pontilhada em tom cinzento para o aluno cobrir
+                cursiveCtx.strokeStyle = '#94A3B8';
+                cursiveCtx.lineWidth = 4;
+                cursiveCtx.setLineDash([8, 8]);
+                cursiveCtx.strokeText(textToDraw, w / 2, h / 2);
+
+                cursiveCtx.fillStyle = 'rgba(148, 163, 184, 0.15)';
+                cursiveCtx.fillText(textToDraw, w / 2, h / 2);
+                cursiveCtx.restore();
+            }
+
+            if (cursiveFreeCtx && cursiveFreeCanvas) {
+                // Desenhar apenas as linhas da pauta escolar sem a letra por baixo (Canvas 2)
+                drawCalligraphyLines(cursiveFreeCtx, cursiveFreeCanvas.width, cursiveFreeCanvas.height);
+            }
+        }
+
+        function startTrace(e, ctx, canvas, type) {
+            if (type === 'guide') isCursiveTracing = true;
+            if (type === 'free') isCursiveFreeTracing = true;
+
+            const rect = canvas.getBoundingClientRect();
+            ctx.beginPath();
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+        }
+
+        function doTrace(e, ctx, canvas, type) {
+            const isTracing = type === 'guide' ? isCursiveTracing : isCursiveFreeTracing;
+            if (!isTracing) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const brushSize = document.getElementById('cursive-brush-size').value;
+
+            ctx.strokeStyle = cursiveBrushColor;
+            ctx.lineWidth = brushSize;
+            ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+            ctx.stroke();
+        }
+
+        function stopTrace(type) {
+            if (type === 'guide') isCursiveTracing = false;
+            if (type === 'free') isCursiveFreeTracing = false;
+        }
+
+        function clearCursiveCanvas() {
+            playSound('pop');
+            renderCursiveBackground();
+        }
+
+        /* ------------------------------------------------------------------
+           MÓDULO 6: HISTÓRIAS MÁGICAS
+        ------------------------------------------------------------------ */
+        let generatedStoryText = '';
+
+        function generateAIStory() {
+            playSound('star');
+            const hero = document.getElementById('story-hero').value;
+            const animal = document.getElementById('story-animal').value;
+            const object = document.getElementById('story-object').value;
+            const place = document.getElementById('story-place').value;
+            const theme = document.getElementById('story-theme').value;
+
+            const btn = document.getElementById('btn-generate-story');
+            btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> ${currentLang === 'pt' ? 'A criar a tua história...' : 'Creating story...'}`;
+
+            setTimeout(() => {
+                btn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> <span>${translations[currentLang].btn_create_story}</span>`;
+
+                let title = '', body = '';
+
+                if (currentLang === 'pt') {
+                    title = `A Aventura Encantada de ${hero.split(' ')[1] || 'Herói'}`;
+                    body = `Era uma vez, ${place}, vivia ${hero}.\n\n` +
+                           `Certo dia, enquanto passeava alegremente, encontrou ${animal} que segurava ${object}.\n\n` +
+                           `Juntos, decidiram partir numa grande jornada ${theme}. No caminho, superaram desafios com muita coragem e amizade.\n\n` +
+                           `E assim, aprenderam que com imaginação e bons amigos, qualquer dia se pode transformar num momento verdadeiramente mágico!`;
+                } else {
+                    title = `The Magical Journey of the Explorer`;
+                    body = `Once upon a time, in ${place}, there lived a friendly hero.\n\n` +
+                           `One bright morning, while exploring around, they met ${animal} holding ${object}.\n\n` +
+                           `Together, they embarked on a wonderful adventure ${theme}. Through kindness and teamwork, they solved every problem along the way.\n\n` +
+                           `And so, they discovered that with great friends and creativity, every day is full of magic!`;
+                }
+
+                generatedStoryText = body;
+                document.getElementById('story-title').textContent = title;
+                document.getElementById('story-text').textContent = body;
+                document.getElementById('story-output-container').classList.remove('hidden');
+
+                addStar();
+                speakStory();
+            }, 800);
+        }
+
+        function speakStory() {
+            if (!audioEnabled || !('speechSynthesis' in window) || !generatedStoryText) return;
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(generatedStoryText);
+            utterance.lang = currentLang === 'pt' ? 'pt-PT' : 'en-GB';
+            utterance.rate = 0.95;
+            window.speechSynthesis.speak(utterance);
+        }
+
+        /* ------------------------------------------------------------------
+           MÓDULO 7: ROBOT PROGRAMADOR
+        ------------------------------------------------------------------ */
+        let robotPos = { x: 0, y: 0 };
+        let starPos = { x: 4, y: 4 };
+        let robotDir = 'RIGHT'; // RIGHT, DOWN, LEFT, UP
+        let robotCommands = [];
+        let robotLevel = 1;
+        let robotObstacles = [];
+
+        function setRobotLevel(lvl) {
+            playSound('pop');
+            robotLevel = lvl;
+            initRobotGame();
+        }
+
+        function initRobotGame() {
+            robotCommands = [];
+            updateLevelButtons('robot', robotLevel, 'border-indigo-500 bg-indigo-500 text-white shadow-md');
+            document.getElementById('robot-level-indicator').textContent = currentLang === 'pt' ? `Nível ${robotLevel}` : `Level ${robotLevel}`;
+            
+            robotPos = { x: 0, y: 0 };
+            robotDir = 'RIGHT';
+            robotObstacles = [];
+
+            if (robotLevel === 1) {
+                // Nível 1: Sem obstáculos, estrela acessível
+                starPos = { x: 3, y: 2 };
+            } else if (robotLevel === 2) {
+                // Nível 2: 2 obstáculos (pedras)
+                starPos = { x: 4, y: 3 };
+                robotObstacles = [{ x: 1, y: 0 }, { x: 2, y: 2 }];
+            } else {
+                // Nível 3: 4 obstáculos (desafio labirinto)
+                starPos = { x: 4, y: 4 };
+                robotObstacles = [{ x: 1, y: 1 }, { x: 2, y: 1 }, { x: 3, y: 3 }, { x: 1, y: 3 }];
+            }
+
+            renderRobotGrid();
+            renderRobotCommands();
+            document.getElementById('robot-feedback').textContent = '';
+        }
+
+        function renderRobotGrid() {
+            const grid = document.getElementById('robot-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            for (let y = 0; y < 5; y++) {
+                for (let x = 0; x < 5; x++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'bg-white rounded-xl border border-slate-200 flex items-center justify-center text-2xl relative shadow-inner aspect-square w-full h-full';
+
+                    const isObstacle = robotObstacles.some(obs => obs.x === x && obs.y === y);
+
+                    if (x === robotPos.x && y === robotPos.y) {
+                        cell.innerHTML = '<span class="animate-bounce">🤖</span>';
+                    } else if (x === starPos.x && y === starPos.y) {
+                        cell.innerHTML = '<span class="text-amber-400 animate-pulse">⭐</span>';
+                    } else if (isObstacle) {
+                        cell.innerHTML = '<span class="opacity-80">🪨</span>';
+                        cell.classList.add('bg-slate-200');
+                    }
+
+                    grid.appendChild(cell);
+                }
+            }
+        }
+
+        function addRobotCommand(cmd) {
+            playSound('pop');
+            if (robotCommands.length >= 10) return;
+            robotCommands.push(cmd);
+            renderRobotCommands();
+        }
+
+        function clearRobotCommands() {
+            playSound('pop');
+            robotCommands = [];
+            renderRobotCommands();
+            document.getElementById('robot-feedback').textContent = '';
+        }
+
+        function renderRobotCommands() {
+            const list = document.getElementById('robot-commands-list');
+            if (!list) return;
+            list.innerHTML = '';
+
+            const icons = {
+                UP: '<i class="fa-solid fa-arrow-up text-blue-500"></i>',
+                DOWN: '<i class="fa-solid fa-arrow-down text-blue-500"></i>',
+                LEFT: '<i class="fa-solid fa-arrow-left text-blue-500"></i>',
+                RIGHT: '<i class="fa-solid fa-arrow-right text-blue-500"></i>',
+                TURN_LEFT: '<i class="fa-solid fa-rotate-left text-purple-500"></i>',
+                TURN_RIGHT: '<i class="fa-solid fa-rotate-right text-purple-500"></i>'
+            };
+
+            robotCommands.forEach((cmd, i) => {
+                const tag = document.createElement('div');
+                tag.className = 'bg-white border-2 border-slate-300 rounded-xl px-2.5 py-1 text-xs font-bold flex items-center gap-1 shadow-sm';
+                tag.innerHTML = `${i + 1}. ${icons[cmd]}`;
+                list.appendChild(tag);
+            });
+        }
+
+        function runRobotCode() {
+            if (robotCommands.length === 0) return;
+
+            const btn = document.getElementById('btn-run-robot');
+            btn.disabled = true;
+            btn.classList.add('opacity-50');
+
+            let step = 0;
+            const interval = setInterval(() => {
+                if (step >= robotCommands.length) {
+                    clearInterval(interval);
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50');
+                    checkRobotWin();
+                    return;
+                }
+
+                const cmd = robotCommands[step];
+                playSound('pop');
+
+                let nextX = robotPos.x;
+                let nextY = robotPos.y;
+
+                if (cmd === 'UP' && robotPos.y > 0) nextY--;
+                else if (cmd === 'DOWN' && robotPos.y < 4) nextY++;
+                else if (cmd === 'LEFT' && robotPos.x > 0) nextX--;
+                else if (cmd === 'RIGHT' && robotPos.x < 4) nextX++;
+
+                // Verificar colisão com obstáculos
+                const hitObstacle = robotObstacles.some(obs => obs.x === nextX && obs.y === nextY);
+                if (!hitObstacle) {
+                    robotPos.x = nextX;
+                    robotPos.y = nextY;
+                } else {
+                    playSound('wrong');
+                }
+
+                renderRobotGrid();
+                step++;
+            }, 500);
+        }
+
+        function checkRobotWin() {
+            const feedback = document.getElementById('robot-feedback');
+            if (robotPos.x === starPos.x && robotPos.y === starPos.y) {
+                playSound('correct');
+                addStar();
+                feedback.textContent = currentLang === 'pt' ? '🎉 Fantástico! O robot chegou à estrela!' : '🎉 Fantastic! Robot reached the star!';
+                feedback.className = 'h-10 text-center font-bold text-base text-emerald-600 flex items-center justify-center';
+            } else {
+                playSound('wrong');
+                feedback.textContent = currentLang === 'pt' ? '🤖 Tenta outra sequência de comandos!' : '🤖 Try another sequence of commands!';
+                feedback.className = 'h-10 text-center font-bold text-base text-rose-500 flex items-center justify-center';
+            }
+        }
+
+        window.addEventListener('load', () => {
+            initMemoryGame();
+            initMathGame();
+            initCanvas();
+            initWordsGame();
+            initCursiveGame();
+            initRobotGame();
+        });
+    </script>
+</body>
+</html>
